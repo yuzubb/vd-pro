@@ -31,7 +31,7 @@ def is_allowed_guild(guild_id: int) -> bool:
 
 def is_allowed():
     async def predicate(interaction: discord.Interaction) -> bool:
-        # サーバーチェックを最初に行う
+        # DM は常に拒否
         if interaction.guild is None:
             await interaction.response.send_message("❌ このBOTはサーバー内でのみ使用できます。", ephemeral=True)
             return False
@@ -40,7 +40,12 @@ def is_allowed():
         if await interaction.client.is_owner(interaction.user):
             return True
 
-        # 許可サーバーチェック
+        # 許可ユーザーはサーバーに関係なく通す（ギルドチェックより先に判定）
+        allowed_ids = load_allowed_users()
+        if interaction.user.id in allowed_ids:
+            return True
+
+        # 上記に該当しない場合は許可サーバーかどうかチェック
         if not is_allowed_guild(interaction.guild.id):
             await interaction.response.send_message(
                 "❌ このサーバーではBOTの使用が許可されていません。\n導入申請は https://discord.gg/cmYmnedX7h までお問い合わせください。",
@@ -48,11 +53,8 @@ def is_allowed():
             )
             return False
 
-        # 許可ユーザーチェック
-        allowed_ids = load_allowed_users()
-        if interaction.user.id not in allowed_ids:
-            await interaction.response.send_message("🚫 あなたはこのBotの機能を利用する権限がありません。", ephemeral=True)
-            return False
+        # 許可サーバー内だがユーザー権限なし
+        await interaction.response.send_message("🚫 あなたはこのBotの機能を利用する権限がありません。", ephemeral=True)
+        return False
 
-        return True
     return app_commands.check(predicate)
