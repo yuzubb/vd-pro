@@ -5,6 +5,7 @@ import os
 import traceback
 import json
 from dotenv import load_dotenv
+from utils import safe_respond
 
 load_dotenv()
 token = os.getenv('TOKEN')
@@ -26,28 +27,32 @@ def is_allowed_guild(guild_id: int) -> bool:
     return guild_id in allowed
 
 
-# CommandTree をサブクラス化して interaction_check を正しくオーバーライドする
-# @bot.tree.interaction_check デコレータはコルーチンを await しないバグがあるため使わない
 class BotTree(app_commands.CommandTree):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if not interaction.guild:
-            await interaction.response.send_message(
-                "❌ このBOTはサーバー内でのみ使用できます。",
-                ephemeral=True
-            )
-            return False
+        try:
+            if not interaction.guild:
+                await safe_respond(
+                    interaction,
+                    "❌ このBOTはサーバー内でのみ使用できます。",
+                    ephemeral=True
+                )
+                return False
 
-        if await self.client.is_owner(interaction.user):
+            if await self.client.is_owner(interaction.user):
+                return True
+
+            if not is_allowed_guild(interaction.guild.id):
+                await safe_respond(
+                    interaction,
+                    "❌ このサーバーではBOTの使用が許可されていません。\n導入申請は https://discord.gg/jqZRDMpfQ までお問い合わせください。",
+                    ephemeral=True
+                )
+                return False
+
             return True
-
-        if not is_allowed_guild(interaction.guild.id):
-            await interaction.response.send_message(
-                "❌ このサーバーではBOTの使用が許可されていません。\n導入申請は https://discord.gg/jqZRDMpfQ までお問い合わせください。",
-                ephemeral=True
-            )
+        except discord.NotFound:
+            # interaction タイムアウト—静かに弾く
             return False
-
-        return True
 
 
 intents = discord.Intents.all()
@@ -55,7 +60,7 @@ bot = commands.Bot(
     command_prefix='$',
     intents=intents,
     help_command=None,
-    tree_cls=BotTree,  # カスタムツリーを登録
+    tree_cls=BotTree,
 )
 
 

@@ -29,11 +29,37 @@ def load_allowed_guilds():
 def is_allowed_guild(guild_id: int) -> bool:
     return guild_id in load_allowed_guilds()
 
+
+async def safe_respond(interaction: discord.Interaction, *args, **kwargs):
+    """
+    interaction.response.is_done() が True の場合（既にack済み）は
+    followup.send にフォールバックする。
+    404 Unknown interaction（タイムアウト）は静かに無視する。
+    """
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(*args, **kwargs)
+        else:
+            await interaction.response.send_message(*args, **kwargs)
+    except discord.NotFound:
+        # interaction が期限切れ（3秒超過）—ログだけ出して無視
+        print(f"[warn] interaction expired: {getattr(interaction.command, 'name', '?')}")
+    except discord.HTTPException as e:
+        if e.code == 40060:
+            # 既にack済み → followup で再送
+            try:
+                await interaction.followup.send(*args, **kwargs)
+            except Exception:
+                pass
+        else:
+            raise
+
+
 def is_allowed():
     async def predicate(interaction: discord.Interaction) -> bool:
         # DM は常に拒否
         if interaction.guild is None:
-            await interaction.response.send_message("❌ このBOTはサーバー内でのみ使用できます。", ephemeral=True)
+            await safe_respond(interaction, "❌ このBOTはサーバー内でのみ使用できます。", ephemeral=True)
             return False
 
         # BOT所有者は常に許可
@@ -45,16 +71,17 @@ def is_allowed():
         if interaction.user.id in allowed_ids:
             return True
 
-        # 上記に該当しない場合は許可サーバーかどうかチェック
+        # 許可サーバーかどうかチェック
         if not is_allowed_guild(interaction.guild.id):
-            await interaction.response.send_message(
+            await safe_respond(
+                interaction,
                 "❌ このサーバーではBOTの使用が許可されていません。\n導入申請は https://discord.gg/cmYmnedX7h までお問い合わせください。",
                 ephemeral=True
             )
             return False
 
         # 許可サーバー内だがユーザー権限なし
-        await interaction.response.send_message("🚫 あなたはこのBotの機能を利用する権限がありません。", ephemeral=True)
+        await safe_respond(interaction, "🚫 あなたはこのBotの機能を利用する権限がありません。", ephemeral=True)
         return False
 
     return app_commands.check(predicate)
