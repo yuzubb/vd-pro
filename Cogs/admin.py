@@ -5,29 +5,20 @@ import json
 import os
 import sys
 import subprocess
+from utils import safe_respond
 
-ALLOWED_USERS_FILE = "allowed_users.json"
+ALLOWED_USERS_FILE = "stock_files/allowed_users.json"
 SERVER_ALLOW_FILE = "server_allow_data.json"
 
 
 # ── JSON ヘルパー ─────────────────────────────────────────────────
 
 def load_allowed_users() -> list[dict]:
-    """
-    allowed_users.json の中身:
-    {
-        "allowed_ids": [
-            {"user_id": 123456, "guild_id": 789012},
-            ...
-        ]
-    }
-    """
     if os.path.exists(ALLOWED_USERS_FILE):
         with open(ALLOWED_USERS_FILE, "r", encoding="utf-8") as f:
             try:
                 data = json.load(f)
                 entries = data.get("allowed_ids", [])
-                # 旧フォーマット（int のリスト）に対応
                 result = []
                 for e in entries:
                     if isinstance(e, int):
@@ -68,7 +59,8 @@ class Admin(commands.Cog):
 
     async def owner_check(self, interaction: discord.Interaction) -> bool:
         if not await interaction.client.is_owner(interaction.user):
-            await interaction.response.send_message(
+            await safe_respond(
+                interaction,
                 "❌ このコマンドはオーナーのみ使用できます。",
                 ephemeral=True
             )
@@ -83,15 +75,12 @@ class Admin(commands.Cog):
         if not await self.owner_check(interaction):
             return
 
-        await interaction.response.send_message("🔄 再起動します...", ephemeral=True)
+        await safe_respond(interaction, "🔄 再起動します...", ephemeral=True)
 
-        # 新しいプロセスを独立して起動してから現プロセスを終了する。
-        # os.execv は現プロセスを完全に置き換えるため他のセッションごと落ちることがある。
-        # subprocess.Popen で子プロセスを切り離すことでその問題を回避する。
         subprocess.Popen(
             [sys.executable] + sys.argv,
             close_fds=True,
-            start_new_session=True   # 親プロセスのセッションから切り離す
+            start_new_session=True
         )
         await self.bot.close()
 
@@ -110,21 +99,18 @@ class Admin(commands.Cog):
         try:
             gid = int(server_id)
         except ValueError:
-            await interaction.response.send_message(
-                "❌ サーバーIDは数値で入力してください。",
-                ephemeral=True
-            )
+            await safe_respond(interaction, "❌ サーバーIDは数値で入力してください。", ephemeral=True)
             return
 
         entries = load_allowed_users()
 
-        # 同じ user_id + guild_id の組み合わせが既に存在するか確認
         already = any(
             e["user_id"] == user.id and e["guild_id"] == gid
             for e in entries
         )
         if already:
-            await interaction.response.send_message(
+            await safe_respond(
+                interaction,
                 f"⚠️ {user.mention}（`{user.id}`）はすでにサーバー `{gid}` の許可ユーザーです。",
                 ephemeral=True
             )
@@ -136,7 +122,8 @@ class Admin(commands.Cog):
         entries.append({"user_id": user.id, "guild_id": gid})
         save_allowed_users(entries)
 
-        await interaction.response.send_message(
+        await safe_respond(
+            interaction,
             f"✅ {user.mention}（`{user.id}`）を **{guild_name}**（`{gid}`）の許可ユーザーに追加しました。",
             ephemeral=True
         )
@@ -154,7 +141,8 @@ class Admin(commands.Cog):
         new_entries = [e for e in entries if e["user_id"] != user.id]
 
         if len(new_entries) == len(entries):
-            await interaction.response.send_message(
+            await safe_respond(
+                interaction,
                 f"⚠️ {user.mention}（`{user.id}`）は許可ユーザーに登録されていません。",
                 ephemeral=True
             )
@@ -163,7 +151,8 @@ class Admin(commands.Cog):
         removed = len(entries) - len(new_entries)
         save_allowed_users(new_entries)
 
-        await interaction.response.send_message(
+        await safe_respond(
+            interaction,
             f"🗑️ {user.mention}（`{user.id}`）を許可ユーザーから削除しました。（{removed}件）",
             ephemeral=True
         )
@@ -178,10 +167,7 @@ class Admin(commands.Cog):
 
         entries = load_allowed_users()
         if not entries:
-            await interaction.response.send_message(
-                "📋 許可ユーザーはまだいません。",
-                ephemeral=True
-            )
+            await safe_respond(interaction, "📋 許可ユーザーはまだいません。", ephemeral=True)
             return
 
         lines = []
@@ -205,7 +191,7 @@ class Admin(commands.Cog):
             color=discord.Color.blue()
         )
         embed.set_footer(text=f"合計: {len(entries)}件")
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await safe_respond(interaction, embed=embed, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
