@@ -79,7 +79,7 @@ async def global_interaction_check(interaction: discord.Interaction) -> bool:
 
     if not is_allowed_guild(interaction.guild.id):
         await interaction.response.send_message(
-            "❌ このサーバーではBOTの使用が許可されていません。\n導入申請は https://discord.gg/cmYmnedX7h までお問い合わせください。",
+            "❌ このサーバーではBOTの使用が許可されていません。\n導入申請は https://discord.gg/jqZRDMpfQ までお問い合わせください。",
             ephemeral=True
         )
         return False
