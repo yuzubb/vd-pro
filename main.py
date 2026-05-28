@@ -26,8 +26,37 @@ def is_allowed_guild(guild_id: int) -> bool:
     return guild_id in allowed
 
 
+# CommandTree をサブクラス化して interaction_check を正しくオーバーライドする
+# @bot.tree.interaction_check デコレータはコルーチンを await しないバグがあるため使わない
+class BotTree(app_commands.CommandTree):
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not interaction.guild:
+            await interaction.response.send_message(
+                "❌ このBOTはサーバー内でのみ使用できます。",
+                ephemeral=True
+            )
+            return False
+
+        if await self.client.is_owner(interaction.user):
+            return True
+
+        if not is_allowed_guild(interaction.guild.id):
+            await interaction.response.send_message(
+                "❌ このサーバーではBOTの使用が許可されていません。\n導入申請は https://discord.gg/jqZRDMpfQ までお問い合わせください。",
+                ephemeral=True
+            )
+            return False
+
+        return True
+
+
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='$', intents=intents, help_command=None)
+bot = commands.Bot(
+    command_prefix='$',
+    intents=intents,
+    help_command=None,
+    tree_cls=BotTree,  # カスタムツリーを登録
+)
 
 
 async def load_cogs():
@@ -63,28 +92,6 @@ async def on_message(message: discord.Message):
         return
 
     await bot.process_commands(message)
-
-
-@bot.tree.interaction_check
-async def global_interaction_check(interaction: discord.Interaction) -> bool:
-    if not interaction.guild:
-        await interaction.response.send_message(
-            "❌ このBOTはサーバー内でのみ使用できます。",
-            ephemeral=True
-        )
-        return False
-
-    if await bot.is_owner(interaction.user):
-        return True
-
-    if not is_allowed_guild(interaction.guild.id):
-        await interaction.response.send_message(
-            "❌ このサーバーではBOTの使用が許可されていません。\n導入申請は https://discord.gg/jqZRDMpfQ までお問い合わせください。",
-            ephemeral=True
-        )
-        return False
-
-    return True
 
 
 @bot.tree.error
