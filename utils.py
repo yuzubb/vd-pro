@@ -3,7 +3,7 @@ from discord import app_commands
 import json
 import os
 
-ALLOWED_USERS_FILE = "allowed_users.json"
+ALLOWED_USERS_FILE = "stock_files/allowed_users.json"
 SERVER_ALLOW_FILE = "server_allow_data.json"
 
 def load_allowed_users():
