@@ -2,8 +2,15 @@ import discord
 from discord import app_commands
 import json
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 ALLOWED_USERS_FILE = "stock_files/allowed_users.json"
+
+# BOTオーナーのDiscord ID（.envのOWNER_IDから読み込む）
+_owner_id_raw = os.getenv("OWNER_ID")
+OWNER_ID = int(_owner_id_raw) if _owner_id_raw else 0
 SERVER_ALLOW_FILE = "server_allow_data.json"
 
 def load_allowed_users():
