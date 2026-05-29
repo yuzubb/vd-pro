@@ -736,14 +736,7 @@ class PaypayCog(commands.Cog):
 
         view = OTPView(phone, password, set_uuid, otpid, otp_pre)
 
-        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-
-
-
-
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)      
 
 async def setup(bot):
-
     await bot.add_cog(PaypayCog(bot))
-
-ENDOFFILE
