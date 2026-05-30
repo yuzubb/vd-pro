@@ -211,67 +211,70 @@ async def create_link(phoneNumber: str, password: str, client_uuid: str, amount:
         if not access_token:
             return "LOGINERR"
 
-        headers = {
-            "Accept":        "application/json, text/plain, */*",
-            'User-Agent':    ua.set(),
-            "Content-Type":  "application/json",
-            "Authorization": f"Bearer {access_token}"
-        }
-
         now_jst = datetime.datetime.now(
             datetime.timezone(datetime.timedelta(hours=9))
         ).strftime('%Y-%m-%dT%H:%M:%S+0900')
 
+        headers = {
+            "Host":           "app4.paypay.ne.jp",
+            "Client-Version": "3.45.0",
+            "System-Locale":  "ja",
+            "User-Agent":     "PaypayApp/3.45.0 CFNetwork/1126 Darwin/19.5.0",
+            "Network-Status": "WIFI",
+            "Device-Name":    "iPhone9,1",
+            "Client-Os-Type": "IOS",
+            "Client-Mode":    "NORMAL",
+            "Client-Type":    "PAYPAYAPP",
+            "Accept-Language":"ja-jp",
+            "Timezone":       "Asia/Tokyo",
+            "Accept":         "*/*",
+            "Client-Uuid":    client_uuid,
+            "Client-Os-Version": "13.5.0",
+            "Content-Type":   "application/json",
+            "Authorization":  f"Bearer {access_token}"
+        }
 
         payload = {
-            "client_uuid":           client_uuid,
+            "androidMinimumVersion": "2.55.0",
+            "requestId":             str(uuid_module.uuid4()).upper(),
             "requestAt":             now_jst,
-            "amount":                amount,
             "theme":                 "default-sendmoney",
-            "requestId":             str(uuid_module.uuid4()),
-            "iosMinimumVersion":     "3.45.0",
-            "androidMinimumVersion": "3.45.0"
+            "amount":                int(amount),
+            "iosMinimumVersion":     "2.55.0"
         }
 
         if passcode:
             payload["passcode"] = passcode
 
-        # 正しいエンドポイントが不明なため複数試す
-        endpoints = [
-            "https://www.paypay.ne.jp/app/v2/p2p-api/createP2PSendMoneyLink",
-            "https://www.paypay.ne.jp/app/v1/p2p-api/createP2PSendMoneyLink",
-            "https://www.paypay.ne.jp/app/v1/p2p-api/createMoneyDistributionLink",
-        ]
+        try:
+            async with session.post(
+                "https://app4.paypay.ne.jp/bff/v2/executeP2PSendMoneyLink",
+                json=payload,
+                headers=headers,
+                params={"payPayLang": "ja"},
+                proxy=PROXY_URL
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
 
-        data = None
-        for endpoint in endpoints:
-            try:
-                async with session.post(
-                    endpoint, json=payload, headers=headers, proxy=PROXY_URL
-                ) as resp:
-                    if resp.status == 404:
-                        print(f"CREATE_LINK_404: {endpoint}")
-                        continue
-                    resp.raise_for_status()
-                    data = await resp.json()
-                    print(f"CREATE_LINK_HIT: {endpoint}")
-                    break
-            except aiohttp.ClientError as e:
-                print(f"CREATE_LINK_EXC ({endpoint}): {e}")
-                continue
+            if data.get("header", {}).get("resultCode") != "S0000":
+                print(f"CREATE_LINK_ERR: {data}")
+                return False
 
-        if data is None:
+            # verificationCode を取得してURLを組み立て
+            code = (
+                data.get("payload", {}).get("verificationCode")
+                or data.get("payload", {}).get("linkCode")
+            )
+            if not code:
+                print(f"CREATE_LINK_NO_CODE: {data}")
+                return False
+
+            return {
+                "url":    f"https://pay.paypay.ne.jp/{code}",
+                "amount": amount
+            }
+
+        except aiohttp.ClientError as e:
+            print(f"CREATE_LINK_EXC: {e}")
             return False
-
-        if data.get("header", {}).get("resultCode") != "S0000":
-            print(f"CREATE_LINK_ERR: {data}")
-            return False
-
-        code = data["payload"].get("verificationCode")
-        if not code:
-            return False
-
-        return {
-            "url":    f"https://pay.paypay.ne.jp/{code}",
-            "amount": amount
-        }
