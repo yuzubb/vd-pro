@@ -159,20 +159,23 @@ class ApproveLinkView(ui.View):
             )
             return
 
-        # パスコード確認
+        user_paypay = paypay_data[owner_id_str]
+
+        # パスコード付きの場合はモーダルで入力させる
         is_passcode = self.link_info.get("payload", {}) \
             .get("pendingP2PInfo", {}) \
             .get("isSetPasscode", False)
 
         if is_passcode:
+            modal = PasscodeModal(self.link_url, self.link_info, user_paypay, self, button)
             await interaction.followup.send(
-                "⚠️ パスコード付きリンクは自動受け取りできません。",
+                "🔑 パスコードが必要です。下のボタンから入力してください。",
+                view=PasscodeInputView(self.link_url, self.link_info, user_paypay, self, button),
                 ephemeral=True
             )
             return
 
         # 受け取り実行
-        user_paypay = paypay_data[owner_id_str]
         result = await paypayu.link_rev(
             self.link_url,
             user_paypay.get("phone"),
@@ -215,6 +218,78 @@ class ApproveLinkView(ui.View):
 
         await interaction.response.edit_message(view=self)
         await interaction.followup.send("受け取りを拒否しました。", ephemeral=True)
+
+
+class PasscodeInputView(ui.View):
+    """パスコード入力ボタンを提供する ephemeral View。"""
+
+    def __init__(self, link_url: str, link_info: dict, user_paypay: dict, parent_view, approve_button):
+        super().__init__(timeout=120)
+        self.link_url       = link_url
+        self.link_info      = link_info
+        self.user_paypay    = user_paypay
+        self.parent_view    = parent_view
+        self.approve_button = approve_button
+
+    @ui.button(label="🔑 パスコードを入力する", style=discord.ButtonStyle.primary)
+    async def enter_passcode(self, interaction: discord.Interaction, button: ui.Button):
+        modal = PasscodeModal(
+            self.link_url, self.link_info,
+            self.user_paypay, self.parent_view, self.approve_button
+        )
+        await interaction.response.send_modal(modal)
+
+
+class PasscodeModal(ui.Modal, title="パスコード入力"):
+    passcode_input = ui.TextInput(
+        label="パスコード",
+        placeholder="パスコードを入力",
+        min_length=1,
+        max_length=16,
+        required=True
+    )
+
+    def __init__(self, link_url: str, link_info: dict, user_paypay: dict, parent_view, approve_button):
+        super().__init__(timeout=120)
+        self.link_url       = link_url
+        self.link_info      = link_info
+        self.user_paypay    = user_paypay
+        self.parent_view    = parent_view
+        self.approve_button = approve_button
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        result = await paypayu.link_rev(
+            self.link_url,
+            self.user_paypay.get("phone"),
+            self.user_paypay.get("password"),
+            self.user_paypay.get("uuid"),
+            passcode=self.passcode_input.value
+        )
+
+        self.parent_view.done = True
+        self.parent_view._disable_all()
+
+        if result is True:
+            self.approve_button.label = "✅ 受け取り済み"
+            self.approve_button.style = discord.ButtonStyle.secondary
+            await interaction.message.edit(view=self.parent_view)
+            await interaction.followup.send("✅ 受け取りが完了しました！", ephemeral=True)
+
+        elif result == "LOGINERR":
+            await interaction.message.edit(view=self.parent_view)
+            await interaction.followup.send(
+                "❌ PayPayログインに失敗しました。オーナーは `/paypayログイン` で再登録してください。",
+                ephemeral=True
+            )
+
+        else:
+            await interaction.message.edit(view=self.parent_view)
+            await interaction.followup.send(
+                "❌ 受け取りに失敗しました。パスコードが違うか、リンクの有効期限切れの可能性があります。",
+                ephemeral=True
+            )
 
 
 class OTPView(ui.View):
