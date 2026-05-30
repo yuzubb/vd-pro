@@ -222,6 +222,7 @@ async def create_link(phoneNumber: str, password: str, client_uuid: str, amount:
             datetime.timezone(datetime.timedelta(hours=9))
         ).strftime('%Y-%m-%dT%H:%M:%S+0900')
 
+
         payload = {
             "client_uuid":           client_uuid,
             "requestAt":             now_jst,
@@ -235,27 +236,42 @@ async def create_link(phoneNumber: str, password: str, client_uuid: str, amount:
         if passcode:
             payload["passcode"] = passcode
 
-        try:
-            async with session.post(
-                "https://www.paypay.ne.jp/app/v2/p2p-api/createP2PSendMoneyLink",
-                json=payload, headers=headers, proxy=PROXY_URL
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
+        # 正しいエンドポイントが不明なため複数試す
+        endpoints = [
+            "https://www.paypay.ne.jp/app/v2/p2p-api/createP2PSendMoneyLink",
+            "https://www.paypay.ne.jp/app/v1/p2p-api/createP2PSendMoneyLink",
+            "https://www.paypay.ne.jp/app/v1/p2p-api/createMoneyDistributionLink",
+        ]
 
-            if data.get("header", {}).get("resultCode") != "S0000":
-                print(f"CREATE_LINK_ERR: {data}")
-                return False
+        data = None
+        for endpoint in endpoints:
+            try:
+                async with session.post(
+                    endpoint, json=payload, headers=headers, proxy=PROXY_URL
+                ) as resp:
+                    if resp.status == 404:
+                        print(f"CREATE_LINK_404: {endpoint}")
+                        continue
+                    resp.raise_for_status()
+                    data = await resp.json()
+                    print(f"CREATE_LINK_HIT: {endpoint}")
+                    break
+            except aiohttp.ClientError as e:
+                print(f"CREATE_LINK_EXC ({endpoint}): {e}")
+                continue
 
-            code = data["payload"].get("verificationCode")
-            if not code:
-                return False
-
-            return {
-                "url":    f"https://pay.paypay.ne.jp/{code}",
-                "amount": amount
-            }
-
-        except aiohttp.ClientError as e:
-            print(f"CREATE_LINK_EXC: {e}")
+        if data is None:
             return False
+
+        if data.get("header", {}).get("resultCode") != "S0000":
+            print(f"CREATE_LINK_ERR: {data}")
+            return False
+
+        code = data["payload"].get("verificationCode")
+        if not code:
+            return False
+
+        return {
+            "url":    f"https://pay.paypay.ne.jp/{code}",
+            "amount": amount
+        }
