@@ -126,6 +126,7 @@ class ApproveLinkView(ui.View):
         self.link_info = link_info
         self.sender_id = sender_id
         self.done      = False
+        self.message: discord.Message | None = None  # 送信後にセット
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.sender_id:
@@ -274,18 +275,18 @@ class PasscodeModal(ui.Modal, title="パスコード入力"):
         if result is True:
             self.approve_button.label = "✅ 受け取り済み"
             self.approve_button.style = discord.ButtonStyle.secondary
-            await interaction.message.edit(view=self.parent_view)
+            await self.parent_view.message.edit(view=self.parent_view)
             await interaction.followup.send("✅ 受け取りが完了しました！", ephemeral=True)
 
         elif result == "LOGINERR":
-            await interaction.message.edit(view=self.parent_view)
+            await self.parent_view.message.edit(view=self.parent_view)
             await interaction.followup.send(
                 "❌ PayPayログインに失敗しました。オーナーは `/paypayログイン` で再登録してください。",
                 ephemeral=True
             )
 
         else:
-            await interaction.message.edit(view=self.parent_view)
+            await self.parent_view.message.edit(view=self.parent_view)
             await interaction.followup.send(
                 "❌ 受け取りに失敗しました。パスコードが違うか、リンクの有効期限切れの可能性があります。",
                 ephemeral=True
@@ -414,11 +415,12 @@ class PaypayCog(commands.Cog):
                 link_info=link_info,
                 sender_id=message.author.id
             )
-            await message.channel.send(
+            sent = await message.channel.send(
                 embed=embed,
                 view=view,
                 allowed_mentions=discord.AllowedMentions.none()
             )
+            view.message = sent
 
     # ── スラッシュコマンド ────────────────────────────────────────────────────
 
