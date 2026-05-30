@@ -254,8 +254,10 @@ async def create_link(phoneNumber: str, password: str, client_uuid: str, amount:
                 params={"payPayLang": "ja"},
                 proxy=PROXY_URL
             ) as resp:
-                resp.raise_for_status()
                 data = await resp.json()
+                if resp.status != 200:
+                    print(f"CREATE_LINK_ERR [{resp.status}]: {data}")
+                    return False
 
             if data.get("header", {}).get("resultCode") != "S0000":
                 print(f"CREATE_LINK_ERR: {data}")
