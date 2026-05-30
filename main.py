@@ -79,21 +79,17 @@ async def on_ready():
         status=discord.Status.idle
     )
 
-    # Botが参加している全ギルドへ即時同期
+    # 参加中の全ギルドへギルド同期（即時反映）
+    # ※ copy_global_to とグローバル sync は重複の原因になるため使わない
     synced_guilds = []
     for guild in bot.guilds:
         try:
-            bot.tree.copy_global_to(guild=guild)
             await bot.tree.sync(guild=guild)
             synced_guilds.append(guild.id)
         except Exception as e:
             print(f"[Sync] Guild {guild.id} の同期に失敗: {e}")
 
     print(f"[Sync] {len(synced_guilds)}件のギルドにスラッシュコマンドを同期しました: {synced_guilds}")
-
-    # グローバル同期（反映に最大1時間かかる場合あり）
-    await bot.tree.sync()
-    print("[Sync] グローバル同期完了")
 
 
 @bot.event
