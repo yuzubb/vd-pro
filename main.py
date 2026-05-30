@@ -28,6 +28,17 @@ def is_allowed_guild(guild_id: int) -> bool:
 
 
 class BotTree(app_commands.CommandTree):
+    async def on_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if isinstance(error, app_commands.CommandNotFound):
+            return
+        await super().on_error(interaction, error)
+
+    async def _call(self, interaction: discord.Interaction):
+        try:
+            await super()._call(interaction)
+        except app_commands.CommandNotFound:
+            pass
+
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         try:
             if not interaction.guild:
