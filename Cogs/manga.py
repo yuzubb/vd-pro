@@ -540,9 +540,9 @@ class MangaCog(commands.Cog):
         lines = []
         for loc in panels:
             ch = self.bot.get_channel(loc["channel_id"])
-            lines.append(
-                f"• {ch.mention if ch else f'ID:{loc[\"channel_id\"]}'} — メッセージID: `{loc['message_id']}`"
-            )
+            ch_str = ch.mention if ch else "ID:" + str(loc["channel_id"])
+            msg_id = loc["message_id"]
+            lines.append(f"• {ch_str} — メッセージID: `{msg_id}`")
 
         embed = discord.Embed(
             title="📋 設置済み漫画パネル一覧",
