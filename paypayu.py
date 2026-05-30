@@ -216,22 +216,22 @@ async def create_link(phoneNumber: str, password: str, client_uuid: str, amount:
         ).strftime('%Y-%m-%dT%H:%M:%S+0900')
 
         headers = {
-            "Host":           "app4.paypay.ne.jp",
-            "Client-Version": "5.52.0",
-            "System-Locale":  "ja",
-            "User-Agent":     "PaypayApp/5.52.0 CFNetwork/1126 Darwin/19.5.0",
-            "Network-Status": "WIFI",
-            "Device-Name":    "iPhone9,1",
-            "Client-Os-Type": "IOS",
-            "Client-Mode":    "NORMAL",
-            "Client-Type":    "PAYPAYAPP",
-            "Accept-Language":"ja-jp",
-            "Timezone":       "Asia/Tokyo",
-            "Accept":         "*/*",
-            "Client-Uuid":    client_uuid,
-            "Client-Os-Version": "13.5.0",
-            "Content-Type":   "application/json",
-            "Authorization":  f"Bearer {access_token}"
+            "Host":              "app4.paypay.ne.jp",
+            "Client-Version":    "5.52.0",
+            "System-Locale":     "ja",
+            "User-Agent":        "PaypayApp/5.52.0 CFNetwork/3826.400.120 Darwin/24.3.0",
+            "Network-Status":    "WIFI",
+            "Device-Name":       "iPhone16,2",
+            "Client-Os-Type":    "IOS",
+            "Client-Mode":       "NORMAL",
+            "Client-Type":       "PAYPAYAPP",
+            "Accept-Language":   "ja-jp",
+            "Timezone":          "Asia/Tokyo",
+            "Accept":            "*/*",
+            "Client-Uuid":       client_uuid,
+            "Client-Os-Version": "18.3.2",
+            "Content-Type":      "application/json",
+            "Authorization":     f"Bearer {access_token}"
         }
 
         payload = {
