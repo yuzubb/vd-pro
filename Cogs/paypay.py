@@ -102,7 +102,7 @@ def build_link_embed(link_url: str, link_info: dict) -> discord.Embed:
         f"**パスワード / ステータス / 有効期限**\n"
         f"`{passcode_status}` / `受け取り待ち` / `{expired_at}`\n"
         f"**リンク**\n"
-        f"<{link_url}>"
+        f"`{link_url}`"
     )
 
     embed = discord.Embed(
@@ -324,6 +324,12 @@ class PaypayCog(commands.Cog):
         if not matches:
             return
 
+        # 元メッセージを削除
+        try:
+            await message.delete()
+        except discord.Forbidden:
+            pass  # 削除権限がない場合は無視
+
         for link_url in matches:
             link_info = await paypayu.check_link(link_url)
             if not link_info:
@@ -335,7 +341,11 @@ class PaypayCog(commands.Cog):
                 link_info=link_info,
                 sender_id=message.author.id
             )
-            await message.channel.send(embed=embed, view=view)
+            await message.channel.send(
+                embed=embed,
+                view=view,
+                allowed_mentions=discord.AllowedMentions.none()
+            )
 
     # ── スラッシュコマンド ────────────────────────────────────────────────────
 
