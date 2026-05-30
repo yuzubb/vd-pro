@@ -231,7 +231,7 @@ class PasscodeInputView(ui.View):
         self.parent_view    = parent_view
         self.approve_button = approve_button
 
-    @ui.button(label="🔑 パスコードを入力する", style=discord.ButtonStyle.primary)
+    @ui.button(label="パスコードを入力する", style=discord.ButtonStyle.primary)
     async def enter_passcode(self, interaction: discord.Interaction, button: ui.Button):
         modal = PasscodeModal(
             self.link_url, self.link_info,
@@ -265,7 +265,7 @@ class PasscodeModal(ui.Modal, title="パスコード入力"):
             self.user_paypay.get("phone"),
             self.user_paypay.get("password"),
             self.user_paypay.get("uuid"),
-            passcode=self.passcode_input.value
+            link_password=self.passcode_input.value
         )
 
         self.parent_view.done = True
