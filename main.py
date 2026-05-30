@@ -68,7 +68,14 @@ async def load_cogs():
     for filename in os.listdir("./Cogs"):
         if filename.endswith(".py"):
             await bot.load_extension(f"Cogs.{filename[:-3]}")
+    # グローバル同期（全サーバーへ反映、最大1時間かかる場合あり）
     await bot.tree.sync()
+    # 許可済みギルドへ即時同期（コマンドがすぐ使えるようになる）
+    for guild_id in load_allowed_guilds():
+        guild = discord.Object(id=guild_id)
+        bot.tree.copy_global_to(guild=guild)
+        await bot.tree.sync(guild=guild)
+        print(f"[Sync] Guild {guild_id} にスラッシュコマンドを同期しました")
 
 bot.setup_hook = load_cogs
 
@@ -103,6 +110,10 @@ async def on_message(message: discord.Message):
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.CheckFailure):
         print(f"{interaction.user}によるコマンド({interaction.command.name})の実行がブロックされました。")
+        return
+    if isinstance(error, app_commands.CommandNotFound):
+        # コマンドがまだ同期されていない場合は無視
+        print(f"CommandNotFound (未同期の可能性): {error}")
         return
     print(error)
     traceback.print_exc()

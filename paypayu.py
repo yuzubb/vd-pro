@@ -174,8 +174,8 @@ async def link_rev(cd: str, phoneNumber: str, password: str, uuid: str, link_pas
             "orderId":            link_info["payload"]["message"]["data"]["orderId"],
             "senderMessageId":    link_info["payload"]["message"]["messageId"],
             "senderChannelUrl":   link_info["payload"]["message"]["chatRoomId"],
-            "iosMinimumVersion":  "3.45.0",
-            "androidMinimumVersion": "3.45.0"
+            "iosMinimumVersion":  "5.52.0",
+            "androidMinimumVersion": "5.52.0"
         }
 
         if link_password:
@@ -217,9 +217,9 @@ async def create_link(phoneNumber: str, password: str, client_uuid: str, amount:
 
         headers = {
             "Host":           "app4.paypay.ne.jp",
-            "Client-Version": "3.45.0",
+            "Client-Version": "5.52.0",
             "System-Locale":  "ja",
-            "User-Agent":     "PaypayApp/3.45.0 CFNetwork/1126 Darwin/19.5.0",
+            "User-Agent":     "PaypayApp/5.52.0 CFNetwork/1126 Darwin/19.5.0",
             "Network-Status": "WIFI",
             "Device-Name":    "iPhone9,1",
             "Client-Os-Type": "IOS",
@@ -235,12 +235,12 @@ async def create_link(phoneNumber: str, password: str, client_uuid: str, amount:
         }
 
         payload = {
-            "androidMinimumVersion": "2.55.0",
+            "androidMinimumVersion": "5.52.0",
             "requestId":             str(uuid_module.uuid4()).upper(),
             "requestAt":             now_jst,
             "theme":                 "default-sendmoney",
             "amount":                int(amount),
-            "iosMinimumVersion":     "2.55.0"
+            "iosMinimumVersion":     "5.52.0"
         }
 
         if passcode:
