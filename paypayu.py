@@ -216,7 +216,6 @@ async def create_link(phoneNumber: str, password: str, client_uuid: str, amount:
         ).strftime('%Y-%m-%dT%H:%M:%S+0900')
 
         headers = {
-            "Host":              "app4.paypay.ne.jp",
             "Client-Version":    "5.52.0",
             "System-Locale":     "ja",
             "User-Agent":        "PaypayApp/5.52.0 CFNetwork/3826.400.120 Darwin/24.3.0",
@@ -227,7 +226,7 @@ async def create_link(phoneNumber: str, password: str, client_uuid: str, amount:
             "Client-Type":       "PAYPAYAPP",
             "Accept-Language":   "ja-jp",
             "Timezone":          "Asia/Tokyo",
-            "Accept":            "*/*",
+            "Accept":            "application/json",
             "Client-Uuid":       client_uuid,
             "Client-Os-Version": "18.3.2",
             "Content-Type":      "application/json",
