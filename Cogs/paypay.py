@@ -100,9 +100,7 @@ def build_link_embed(link_url: str, link_info: dict) -> discord.Embed:
         f"**注文ID**\n"
         f"```{order_id}```\n"
         f"**パスワード / ステータス / 有効期限**\n"
-        f"`{passcode_status}` / `受け取り待ち` / `{expired_at}`\n"
-        f"**リンク**\n"
-        f"`{link_url}`"
+        f"`{passcode_status}` / `受け取り待ち` / `{expired_at}`"
     )
 
     embed = discord.Embed(
